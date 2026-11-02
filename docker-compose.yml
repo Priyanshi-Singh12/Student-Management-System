@@ -1,0 +1,48 @@
+services:
+
+  # Web Application
+  web:
+    build: .
+    container_name: student-web
+
+    ports:
+      - "5002:5000"
+
+    environment:
+      PORT: 5000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: student-db
+
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
